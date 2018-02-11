@@ -1,0 +1,33 @@
+#!/bin/bash
+cd /var/www/html
+if [ -f ./app/etc/config.php ] || [ -f ./app/etc/env.php ]; then
+  echo "It appears Magento is already installed (app/etc/config.php or app/etc/env.php exist). Exiting setup..."
+  /usr/local/bin/php bin/magento setup:upgrade
+  /usr/local/bin/php bin/magento setup:di:compile
+  /usr/local/bin/php bin/magento setup:static-content:deploy -f
+  /usr/local/bin/php bin/magento cache:clean && php bin/magento cache:flush
+  exit
+fi
+
+cd /var/www
+curl https://codeload.github.com/magento/magento2/tar.gz/$MAGENTO_VERSION -o $MAGENTO_VERSION.tar.gz
+tar xvf $MAGENTO_VERSION.tar.gz
+mv magento2-$MAGENTO_VERSION/* magento2-$MAGENTO_VERSION/.htaccess /var/www/html
+cd /var/www/html
+find . -type d -exec chmod 770 {} \; \
+find . -type f -exec chmod 660 {} \; \
+chmod u+x bin/magento
+cd /var/www
+mkdir .composer
+cp /temp/auth.json .composer/
+git clone https://github.com/d9eck/wwwmag.git
+find wwwmag/pub/media -type f -exec chmod g+w {} \;
+find wwwmag/pub/media -type d -exec chmod g+ws {} \;
+rsync -avz wwwmag/* html/
+cd /var/www/html
+composer install
+composer config repositories.magento composer https://repo.magento.com/
+/usr/local/bin/php bin/magento setup:install --base-url=$MAGENTO_URL --backend-frontname=$MAGENTO_ADMIN_URI --language=$MAGENTO_LANGUAGE --timezone=$MAGENTO_TIMEZONE --currency=$MAGENTO_DEFAULT_CURRENCY --db-host=$MYSQL_HOST --db-name=$MYSQL_DATABASE --db-user=$MYSQL_USER --db-password=$MYSQL_PASSWORD --use-secure=1 --base-url-secure=$MAGENTO_URL_SECURE --use-secure-admin=1 --admin-firstname=$MAGENTO_ADMIN_FIRSTNAME --admin-lastname=$MAGENTO_ADMIN_LASTNAME --admin-email=$MAGENTO_ADMIN_EMAIL --admin-user=$MAGENTO_ADMIN_USERNAME --admin-password=$MAGENTO_ADMIN_PASSWORD
+/usr/local/bin/php bin/magento setup:di:compile
+/usr/local/bin/php bin/magento setup:static-content:deploy -f
+/usr/local/bin/php bin/magento cache:clean && php bin/magento cache:flush
