@@ -19,13 +19,13 @@ ENV MYSQL_DATABASE "magento"
 ENV MAGENTO_LANGUAGE "en_US"
 ENV MAGENTO_TIMEZONE "Europe/Madrid"
 ENV MAGENTO_DEFAULT_CURRENCY "EUR"
-ENV MAGENTO_URL "http://www.marypeckceramics.com/"
-ENV MAGENTO_URL_SECURE "https://www.marypeckceramics.com/"
+ENV MAGENTO_URL "http://www.url.com/"
+ENV MAGENTO_URL_SECURE "https://www.url.com/"
 ENV MAGENTO_ADMIN_FIRSTNAME "Admin"
-ENV MAGENTO_ADMIN_LASTNAME "MaryPeckCeramics"
-ENV MAGENTO_ADMIN_EMAIL "daniel.co.so@gmail.com"
+ENV MAGENTO_ADMIN_LASTNAME "istrO"
+ENV MAGENTO_ADMIN_EMAIL "admin@dummy.com"
 ENV MAGENTO_ADMIN_URI "admin"
-ENV MAGENTO_ADMIN_USERNAME "marypeck"
+ENV MAGENTO_ADMIN_USERNAME "username"
 ENV MAGENTO_ADMIN_PASSWORD "password"
 ENV MAGENTO_MODE "developer"
 
@@ -53,10 +53,11 @@ RUN apt-get update && apt-get install -y \
 		git \
 	--no-install-recommends && rm -r /var/lib/apt/lists/*
 
-COPY docker-php-ext-* /usr/local/bin/
+COPY ./bin/docker-php-ext-* /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-php-ext-*
 # Set PHP config directory
-RUN mkdir -p $PHP_INI_DIR/conf.d
+RUN mkdir -p $PHP_INI_DIR/conf.d \
+	&& mkdir -p /etc/my_init.d
 
 # Install PHP & Apache2
 
@@ -128,35 +129,32 @@ RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype
     && docker-php-ext-install xsl \
     && docker-php-ext-install soap \
     && requirementsToRemove="libpng12-dev libmcrypt-dev libcurl3-dev libpng12-dev libfreetype6-dev libjpeg-turbo8-dev" \
-    && apt-get purge --auto-remove -y $requirementsToRemove
+    && apt-get purge --auto-remove -y $requirementsToRemove \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Prepare Composer & Magento
 
-RUN mkdir /temp && cd /temp \
-	&& curl -sS https://getcomposer.org/installer | php \
-	&& mv composer.phar /usr/local/bin/composer
 COPY ./auth.json /temp/
-
-RUN mkdir /var/www/html \
-	&& chsh -s /bin/bash www-data \
-	&& chown -R www-data:www-data /var/www
-
+COPY ./mpc-web /var/www/
+COPY ./bin/mpc-up.sh /etc/my_init.d/
 COPY ./bin/install-magento /usr/local/bin/install-magento
-RUN chmod +x /usr/local/bin/install-magento
-
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Add cron job
 ADD crontab /etc/cron.d/magento2-cron
-RUN chmod 0644 /etc/cron.d/magento2-cron \
-	&& crontab -u www-data /etc/cron.d/magento2-cron
-
-RUN a2enmod ssl && a2enmod rewrite
-COPY marypeckceramics.* /etc/ssl/private/
-
-RUN mkdir /etc/service/apache2
+COPY ./cert/marypeckceramics.* /etc/ssl/private/
 ADD apache2-foreground /etc/service/apache2/run
-RUN chmod +x /etc/service/apache2/run
+
+RUN cd /temp \
+	&& curl -sS https://getcomposer.org/installer | php \
+	&& mv composer.phar /usr/local/bin/composer \
+	&& chmod +x /etc/my_init.d/mpc-up.sh \
+	&& mkdir /var/www/html \
+	&& chsh -s /bin/bash www-data \
+	&& chown -R www-data:www-data /var/www \
+	&& chmod +x /usr/local/bin/install-magento \
+	&& chmod 0644 /etc/cron.d/magento2-cron \
+	&& crontab -u www-data /etc/cron.d/magento2-cron \
+	&& a2enmod ssl && a2enmod rewrite \
+	&& mkdir /etc/service/apache2 \
+	&& chmod +x /etc/service/apache2/run
 
 WORKDIR /var/www/html
 EXPOSE 80 443

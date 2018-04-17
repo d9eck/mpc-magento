@@ -20,10 +20,9 @@ chmod u+x bin/magento
 cd /var/www
 mkdir .composer
 cp /temp/auth.json .composer/
-git clone https://github.com/d9eck/wwwmag.git
-find wwwmag/pub/media -type f -exec chmod g+w {} \;
-find wwwmag/pub/media -type d -exec chmod g+ws {} \;
-rsync -avz wwwmag/* html/
+find mpc-web/pub/media -type f -exec chmod g+w {} \;
+find mpc-web/pub/media -type d -exec chmod g+ws {} \;
+rsync -avz mpc-web/* html/
 cd /var/www/html
 composer install
 composer config repositories.magento composer https://repo.magento.com/
