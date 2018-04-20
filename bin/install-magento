@@ -26,6 +26,7 @@ rsync -avz mpc-web/* html/
 cd /var/www/html
 composer install
 composer config repositories.magento composer https://repo.magento.com/
+/usr/local/bin/php bin/magento module:enable --all
 /usr/local/bin/php bin/magento setup:install --base-url=$MAGENTO_URL --backend-frontname=$MAGENTO_ADMIN_URI --language=$MAGENTO_LANGUAGE --timezone=$MAGENTO_TIMEZONE --currency=$MAGENTO_DEFAULT_CURRENCY --db-host=$MYSQL_HOST --db-name=$MYSQL_DATABASE --db-user=$MYSQL_USER --db-password=$MYSQL_PASSWORD --use-secure=1 --base-url-secure=$MAGENTO_URL_SECURE --use-secure-admin=1 --admin-firstname=$MAGENTO_ADMIN_FIRSTNAME --admin-lastname=$MAGENTO_ADMIN_LASTNAME --admin-email=$MAGENTO_ADMIN_EMAIL --admin-user=$MAGENTO_ADMIN_USERNAME --admin-password=$MAGENTO_ADMIN_PASSWORD
 /usr/local/bin/php bin/magento setup:di:compile
 /usr/local/bin/php bin/magento setup:static-content:deploy -f

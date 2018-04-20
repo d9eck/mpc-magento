@@ -9,25 +9,7 @@ ENV PHP_VERSION 7.0.24
 ENV PHP_FILENAME php-7.0.24.tar.xz
 ENV PHP_SHA256 4dba7aa365193c9229f89f1975fad4c01135d29922a338ffb4a27e840d6f1c98
 ENV PHP_MEMORY_LIMIT "1024M"
-
 ENV MAGENTO_VERSION "2.2.2"
-ENV MYSQL_HOST "mpshop-mariadb"
-ENV MYSQL_ROOT_PASSWORD "password"
-ENV MYSQL_USER "magento"
-ENV MYSQL_PASSWORD "password"
-ENV MYSQL_DATABASE "magento"
-ENV MAGENTO_LANGUAGE "en_US"
-ENV MAGENTO_TIMEZONE "Europe/Madrid"
-ENV MAGENTO_DEFAULT_CURRENCY "EUR"
-ENV MAGENTO_URL "http://www.url.com/"
-ENV MAGENTO_URL_SECURE "https://www.url.com/"
-ENV MAGENTO_ADMIN_FIRSTNAME "Admin"
-ENV MAGENTO_ADMIN_LASTNAME "istrO"
-ENV MAGENTO_ADMIN_EMAIL "admin@dummy.com"
-ENV MAGENTO_ADMIN_URI "admin"
-ENV MAGENTO_ADMIN_USERNAME "username"
-ENV MAGENTO_ADMIN_PASSWORD "password"
-ENV MAGENTO_MODE "developer"
 
 # phpize deps
 RUN apt-get update && apt-get install -y \
@@ -39,10 +21,6 @@ RUN apt-get update && apt-get install -y \
 		make \
 		pkg-config \
 		re2c \
-	--no-install-recommends && rm -r /var/lib/apt/lists/*
-
-# persistent / runtime deps
-RUN apt-get update && apt-get install -y \
 		ca-certificates \
 		curl \
 		libcurl3 \
@@ -51,9 +29,9 @@ RUN apt-get update && apt-get install -y \
 		libxml2 \
 		rsync \
 		git \
-	--no-install-recommends && rm -r /var/lib/apt/lists/*
+		--no-install-recommends
 
-COPY ./bin/docker-php-ext-* /usr/local/bin/
+COPY bin/docker-php-ext-* /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-php-ext-*
 # Set PHP config directory
 RUN mkdir -p $PHP_INI_DIR/conf.d \
@@ -63,7 +41,7 @@ RUN mkdir -p $PHP_INI_DIR/conf.d \
 
 RUN echo "memory_limit=$PHP_MEMORY_LIMIT" > /usr/local/etc/php/conf.d/memory-limit.ini
 
-RUN apt-get update && apt-get install -y apache2 apache2-utils --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y apache2 apache2-utils --no-install-recommends
 
 RUN rm -rf /var/www/html && mkdir -p /var/lock/apache2 /var/run/apache2 /var/log/apache2 /var/www/html && chown -R www-data:www-data /var/lock/apache2 /var/run/apache2 /var/log/apache2 /var/www/html
 
@@ -84,7 +62,7 @@ RUN set -xe \
 		libxml2-dev \
 		xz-utils \
 	" \
-	&& apt-get update && apt-get install -y $buildDeps --no-install-recommends && rm -rf /var/lib/apt/lists/* \
+	&& apt-get update && apt-get install -y $buildDeps --no-install-recommends \
 	&& curl -fSL "http://php.net/get/$PHP_FILENAME/from/this/mirror" -o "$PHP_FILENAME" \
 	&& echo "$PHP_SHA256 *$PHP_FILENAME" | sha256sum -c - \
 	&& curl -fSL "http://php.net/get/$PHP_FILENAME.asc/from/this/mirror" -o "$PHP_FILENAME.asc" \
@@ -135,7 +113,7 @@ RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype
 # Prepare Composer & Magento
 
 COPY ./auth.json /temp/
-COPY ./mpc-web /var/www/
+COPY mpc-web /var/www/mpc-web
 COPY ./bin/mpc-up.sh /etc/my_init.d/
 COPY ./bin/install-magento /usr/local/bin/install-magento
 ADD crontab /etc/cron.d/magento2-cron
@@ -146,14 +124,12 @@ RUN cd /temp \
 	&& curl -sS https://getcomposer.org/installer | php \
 	&& mv composer.phar /usr/local/bin/composer \
 	&& chmod +x /etc/my_init.d/mpc-up.sh \
-	&& mkdir /var/www/html \
 	&& chsh -s /bin/bash www-data \
 	&& chown -R www-data:www-data /var/www \
 	&& chmod +x /usr/local/bin/install-magento \
 	&& chmod 0644 /etc/cron.d/magento2-cron \
 	&& crontab -u www-data /etc/cron.d/magento2-cron \
 	&& a2enmod ssl && a2enmod rewrite \
-	&& mkdir /etc/service/apache2 \
 	&& chmod +x /etc/service/apache2/run
 
 WORKDIR /var/www/html
